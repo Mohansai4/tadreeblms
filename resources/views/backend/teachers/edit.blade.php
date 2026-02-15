@@ -142,6 +142,20 @@
                     </select>
                 </div>
 
+                <!-- Department -->
+                <div class="col-lg-6 mt-3">
+                    <label>Department</label>
+                    <select name="department" class="form-control">
+                        <option value="">Select Department</option>
+                        @foreach($departments as $dept)
+                            <option value="{{ $dept->id }}"
+                                {{ optional(optional($teacher->employee)->department_details)->id == $dept->id ? 'selected' : '' }}>
+                                {{ $dept->title }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <!-- Status -->
                 <div class="col-lg-6 mt-3">
                     <label>Status</label>

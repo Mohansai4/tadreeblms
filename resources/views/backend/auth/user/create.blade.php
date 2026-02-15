@@ -139,6 +139,25 @@
                 </div>
             </div>
 
+            <!-- Department -->
+            <div class="form-group row">
+                <label for="department" class="col-md-2 form-control-label">
+                    @lang('Department')
+                </label>
+                <div class="col-md-10">
+                    <select name="department" id="department" class="form-control">
+                        <option value="">Select Department</option>
+                        @if(isset($departments))
+                            @foreach($departments as $dept)
+                                <option value="{{ $dept->id }}" {{ old('department') == $dept->id ? 'selected' : '' }}>
+                                    {{ $dept->title }}
+                                </option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+            </div>
+
             <!-- Form Buttons -->
             <div class="row mt-3">
                 <div class="col-12 d-flex justify-content-between">

@@ -17,6 +17,8 @@ use App\Repositories\Backend\Auth\PermissionRepository;
 use Yajra\DataTables\DataTables;
 use DB;
 use App\Services\LicenseService;
+use App\Models\Department;
+use App\Models\EmployeeProfile;
 
 class TeachersController extends Controller
 {
@@ -151,6 +153,9 @@ class TeachersController extends Controller
                     </div>';
             return $html;
         })
+            ->addColumn('department', function ($q) {
+                return optional(optional($q->employee)->department_details)->title ?? '-';
+            })
             ->rawColumns(['actions', 'image', 'status'])
             ->make();
     }
@@ -237,7 +242,8 @@ class TeachersController extends Controller
     {
         $teacher = User::findOrFail($id);
         $countries = DB::table('master_countries')->get();
-        return view('backend.teachers.edit', compact('teacher','countries'));
+        $departments = Department::where('published', 1)->orderBy('title')->get();
+        return view('backend.teachers.edit', compact('teacher','countries','departments'));
     }
 
     /**
@@ -300,6 +306,14 @@ class TeachersController extends Controller
                 } catch (\Exception $e) {
                     \Log::error('User created - Keygen sync error', ['error' => $e->getMessage()]);
                 }
+
+        // Save department to employee profile if provided
+        if ($request->filled('department')) {
+            EmployeeProfile::updateOrCreate(
+                ['user_id' => $teacher->id],
+                ['department' => $request->department]
+            );
+        }
 
         return redirect()->route('admin.teachers.index')->withFlashSuccess(trans('alerts.backend.general.updated'));
     }

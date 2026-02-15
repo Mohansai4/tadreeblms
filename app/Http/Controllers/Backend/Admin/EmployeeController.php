@@ -120,18 +120,10 @@ class EmployeeController extends Controller
     }
 
 
-        return redirect()->back()->withErrors($failures);
-    }
-}
+      
 
 
-    public function downloadSample()
-{
-    return Excel::download(
-        new \App\Exports\EmployeeSampleExport(),
-        'employee_import_sample.xlsx'
-    );
-}   
+   
     /**
      * Display a listing of Courses via ajax DataTable.
      *
@@ -376,7 +368,8 @@ class EmployeeController extends Controller
 
         return view('backend.auth.user.create',[ 'return_to' => route('admin.employee.index')])
             ->withRoles($roleRepository->with('permissions')->get(['id', 'name']))
-            ->withPermissions($permissionRepository->get(['id', 'name']));
+            ->withPermissions($permissionRepository->get(['id', 'name']))
+            ->withDepartments(Department::where('published', 1)->orderBy('title')->get());
     }
 
     /**

@@ -87,6 +87,7 @@
                         <th>First Name</th>
                         <th>Last Name</th>
                         <th>Email</th>
+                        <th>Department</th>
                         @if(request('show_deleted') != 1)
                         <th>Status</th>
                         @endif
@@ -168,6 +169,7 @@ $(function () {
             { data: 'first_name' },
             { data: 'last_name' },
             { data: 'email' },
+            { data: 'department', orderable: false, searchable: false },
             @if(request('show_deleted') != 1)
             { data: 'status' },
             @endif
