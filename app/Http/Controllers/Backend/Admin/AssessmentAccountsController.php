@@ -394,11 +394,18 @@ class AssessmentAccountsController extends Controller
 
     public function assignment_create_with_course(Request $request, $id = null)
     {
+        
         $user_id = $id;
-
-        $courses = Course::whereNull('deleted_at')->get();
-
+        $course_lang = $request->course_lang ?? 'english';
+        
+        $tests = DB::table('tests')->where('deleted_at', '=', NULL)->get();
+        $courses = Course::where('deleted_at', '=', NULL)
+                            ->where('course_lang', $course_lang)
+                            ->get();
+        $category = Category::where('deleted_at', '=', NULL)->get();
+        
         $teachers = User::query()->role('student')
+                            // ->whereIn('employee_type', ['internal'])
                             ->groupBy('email')
                             ->orderBy('created_at', 'desc')
                             ->active()
@@ -406,8 +413,9 @@ class AssessmentAccountsController extends Controller
                             ->pluck('name', 'id');
 
         $departments = Department::all();
-
-        return view('backend.assessment_accounts.create_assignment_course', compact('user_id', 'teachers', 'courses', 'departments'));
+        
+        return view('backend.assessment_accounts.create_assignment_course', compact('user_id', 'tests', 'teachers', 'courses', 'category', 'departments'));
+        // return view('backend.assessment_accounts.assignment_create', compact('user_id', 'tests','teachers','courses'));
     }
 
     public function assignment_store(StoreAssignmentsRequest $request)
@@ -547,9 +555,11 @@ class AssessmentAccountsController extends Controller
     public function course_assignment(Request $request)
     {
 
-        $this->validate($request,
+        $this->validate($request, 
             [
+                // 'title' => 'required',
                 'course_id' => 'required',
+                // 'due_date' => 'required',    
                 'teachers' => 'required_without:department_id',
                 'department_id' => 'required_without:teachers',
             ],
@@ -603,11 +613,16 @@ class AssessmentAccountsController extends Controller
 
         foreach ($course_ids_arr as $course_id) {
             $course_Ass = new courseAssignment;
-            $course_Ass->title = 'Course Enrollment - ' . date('Y-m-d');
+            // $course_Ass->title = $request->title;
             $course_Ass->course_id = $course_id;
+
+
             $course_Ass->assign_by = 1;
-            $course_Ass->assign_date = date('Y-m-d');
+            $course_Ass->assign_date =  date('Y-m-d');
             $course_Ass->assign_to = $assign_to;
+            //dd($course_Ass->assign_to);
+            // $course_Ass->due_date = $request->due_date;
+            // $course_Ass->message = $request->message;
             $course_Ass->department_id = $request->department_id;
             $course_Ass->save();
 
@@ -652,12 +667,14 @@ class AssessmentAccountsController extends Controller
                     SubscribeCourse::updateOrCreate([
                         'user_id' => $user,
                         'course_id' => $course_id,
+                        
                     ],[
                         'has_feedback' => $has_feedback > 0 ? 1 : 0,
                         'has_assesment' => $has_assesment > 0 ? 1 : 0,
                         'course_trainer_name' => CustomHelper::getCourseTrainerName($course_id) ?? null,
                         'status' => 1,
                         'assign_date' => $course_Ass->assign_date,
+                        'due_date' => $course_Ass->due_date
                     ]);
 
                     $user_fav_lang = $emp->fav_lang;
@@ -1103,10 +1120,10 @@ class AssessmentAccountsController extends Controller
     {
 
         DB::table('course_assignment')->where('id', $request->user_id)->update([
-            'title' => $request->title,
-            'due_date' => $request->due_date,
+            // 'title' => $request->title,
+            // 'due_date' => $request->due_date,
             'assign_to' => isset($request->teachers) ? count($request->teachers) > 0 ? implode(',', $request->teachers) : null : null,
-            'message' => $request->message,
+            // 'message' => $request->message,  
             'department_id' => $request->department_id,
             'course_id' => $request->course_id,
         ]);
