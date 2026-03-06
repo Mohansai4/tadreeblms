@@ -24,7 +24,7 @@ class LiveLessonController extends Controller
         if (!Gate::allows('live_lesson_access')) {
             return abort(401);
         }
-        $courses = $courses = Course::has('category')->ofTeacher()->pluck('title', 'id')->prepend('Please select', '');
+        $courses = Course::has('category')->ofTeacher()->pluck('title', 'id')->prepend('Please select', '');
         return view('backend.live-lessons.index', compact('courses'));
     }
 
@@ -34,77 +34,89 @@ class LiveLessonController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function getData(Request $request)
-    {
-        $has_view = false;
-        $has_delete = false;
-        $has_edit = false;
-        $liveLessons = "";
-        $liveLessons = Lesson::query()->where('live_lesson', '=', 1)->whereIn('course_id', Course::ofTeacher()->pluck('id'));
+{
+    $has_view = false;
+    $has_delete = false;
+    $has_edit = false;
 
+    $query = Lesson::query()
+        ->where('live_lesson', 1)
+        ->whereIn('course_id', Course::ofTeacher()->pluck('id'));
 
-        if ($request->course_id != "") {
-            $liveLessons = $liveLessons->where('course_id', (int)$request->course_id)->orderBy('created_at', 'desc');
-        }
-
-        if ($request->show_deleted == 1) {
-            if (!Gate::allows('live_lesson_delete')) {
-                return abort(401);
-            }
-            $liveLessons = Lesson::query()->where('live_lesson', '=', 1)->with('course')->orderBy('created_at', 'desc')->onlyTrashed();
-        }
-
-
-        if (auth()->user()->can('live_lesson_view')) {
-            $has_view = true;
-        }
-        if (auth()->user()->can('live_lesson_edit')) {
-            $has_edit = true;
-        }
-        if (auth()->user()->can('live_lesson_delete')) {
-            $has_delete = true;
-        }
-
-        return DataTables::of($liveLessons)
-            ->addIndexColumn()
-            ->addColumn('actions', function ($liveLesson) use ($has_view, $has_edit, $has_delete, $request) {
-                $view = "";
-                $edit = "";
-                $delete = "";
-                if ($request->show_deleted == 1) {
-                    return view('backend.datatable.action-trashed')->with(['route_label' => 'admin.live-lessons', 'label' => 'id', 'value' => $liveLesson->id]);
-                }
-                if ($has_view) {
-                    $view = view('backend.datatable.action-view')
-                        ->with(['route' => route('admin.live-lessons.show', ['live_lesson' => $liveLesson->id])])->render();
-                }
-                if ($has_edit) {
-                    $edit = view('backend.datatable.action-edit')
-                        ->with(['route' => route('admin.live-lessons.edit', ['live_lesson' => $liveLesson->id])])
-                        ->render();
-                    $view .= $edit;
-                }
-
-                if ($has_delete) {
-                    $delete = view('backend.datatable.action-delete')
-                        ->with(['route' => route('admin.live-lessons.destroy', ['live_lesson' => $liveLesson->id])])
-                        ->render();
-                    $view .= $delete;
-                }
-
-                if (auth()->user()->can('live_lesson_view')) {
-                    if ($liveLesson->test != "") {
-                        $view .= '<a href="' . route('admin.tests.index', ['lesson_id' => $liveLesson->id]) . '" class="btn btn-success btn-block mb-1">' . trans('labels.backend.tests.title') . '</a>';
-                    }
-                }
-
-                return $view;
-            })
-            ->editColumn('course', function ($liveLesson) {
-                return ($liveLesson->course) ? $liveLesson->course->title : 'N/A';
-            })
-            ->rawColumns(['actions'])
-            ->make();
+    if (!empty($request->course_id)) {
+        $query->where('course_id', (int)$request->course_id);
     }
+
+    if ($request->show_deleted == 1) {
+    if (!Gate::allows('live_lesson_delete')) {
+        return abort(401);
+    }
+
+    $query = Lesson::onlyTrashed()
+        ->where('live_lesson', 1)
+        ->whereIn('course_id', Course::ofTeacher()->pluck('id'))
+        ->with('course');
+}
+
+    $query->orderBy('created_at', 'desc');
+
+    if (auth()->user()->can('live_lesson_view')) {
+        $has_view = true;
+    }
+
+    if (auth()->user()->can('live_lesson_edit')) {
+        $has_edit = true;
+    }
+
+    if (auth()->user()->can('live_lesson_delete')) {
+        $has_delete = true;
+    }
+
+    return DataTables::of($query)
+        ->addIndexColumn()
+        ->addColumn('actions', function ($liveLesson) use ($has_view, $has_edit, $has_delete, $request) {
+
+            if ($request->show_deleted == 1) {
+                return view('backend.datatable.action-trashed')->with([
+                    'route_label' => 'admin.live-lessons',
+                    'label' => 'id',
+                    'value' => $liveLesson->id
+                ]);
+            }
+
+            $actions = "";
+
+            if ($has_view) {
+                $actions .= view('backend.datatable.action-view')
+                    ->with(['route' => route('admin.live-lessons.show', $liveLesson->id)])
+                    ->render();
+            }
+
+            if ($has_edit) {
+                $actions .= view('backend.datatable.action-edit')
+                    ->with(['route' => route('admin.live-lessons.edit', $liveLesson->id)])
+                    ->render();
+            }
+
+            if ($has_delete) {
+                $actions .= view('backend.datatable.action-delete')
+                    ->with(['route' => route('admin.live-lessons.destroy', $liveLesson->id)])
+                    ->render();
+            }
+
+            if (auth()->user()->can('live_lesson_view') && $liveLesson->test != "") {
+    $actions .= '<a href="' . route('admin.tests.index', ['lesson_id' => $liveLesson->id]) . '" class="btn btn-success btn-block mb-1">'
+        . trans('labels.backend.tests.title') . '</a>';
+}
+
+return $actions;
+        })
+        ->editColumn('course', function ($liveLesson) {
+            return $liveLesson->course ? $liveLesson->course->title : 'N/A';
+        })
+        ->rawColumns(['actions'])
+        ->make(true);
+        }
 
     /**
      * Show the form for creating a new resource.
